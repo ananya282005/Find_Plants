@@ -233,11 +233,11 @@
       border: 1px solid rgba(0, 245, 212, 0.3);
     }
 
-    .tag-pill.flower {
-      background: rgba(247, 37, 133, 0.15);
-      color: var(--accent-pink);
-      border: 1px solid rgba(247, 37, 133, 0.3);
-    }
+    .tag-pill.crop { background: var(--accent-glow); color: var(--accent-teal); }
+    .tag-pill.vegetable { background: rgba(46, 196, 182, 0.15); color: var(--accent-green); border-color: rgba(46, 196, 182, 0.3); }
+    .tag-pill.flower { background: rgba(247, 37, 133, 0.15); color: var(--accent-pink); border-color: rgba(247, 37, 133, 0.3); }
+    .tag-pill.fruit { background: rgba(255, 193, 7, 0.15); color: #ffc107; border-color: rgba(255, 193, 7, 0.3); }
+    .tag-pill.herb { background: rgba(76, 175, 80, 0.15); color: #4caf50; border-color: rgba(76, 175, 80, 0.3); }
 
     .hint-banner {
       position: absolute;
@@ -251,65 +251,20 @@
       pointer-events: none;
     }
 
+    .loading { text-align: center; color: var(--text-muted); padding: 20px; }
+
     @media (max-width: 768px) {
-      body {
-        min-height: 100dvh;
-      }
-
-      aside.control-panel {
-        width: min(92vw, 430px);
-        max-height: 46vh;
-        top: 12px;
-        left: 12px;
-        right: 12px;
-        padding: 14px;
-        gap: 12px;
-      }
-
-      .search-box {
-        display: grid;
-        grid-template-columns: 1fr 48px;
-      }
-
-      .btn {
-        min-height: 42px;
-      }
-
-      .mode-toggle {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .mode-btn {
-        width: 100%;
-      }
-
-      section.results-drawer {
-        width: min(92vw, 430px);
-        max-height: 50vh;
-        top: auto;
-        right: 12px;
-        bottom: 12px;
-        left: 12px;
-        transform: translateY(120%);
-        padding: 16px;
-      }
-
-      section.results-drawer.open {
-        transform: translateY(0);
-      }
-
-      .drawer-head h2 {
-        font-size: 16px;
-      }
-
-      .metrics-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-
-      .hint-banner {
-        display: none;
-      }
+      body { min-height: 100dvh; }
+      aside.control-panel { width: min(92vw, 430px); max-height: 46vh; top: 12px; left: 12px; right: 12px; padding: 14px; gap: 12px; }
+      .search-box { display: grid; grid-template-columns: 1fr 48px; }
+      .btn { min-height: 42px; }
+      .mode-toggle { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .mode-btn { width: 100%; }
+      section.results-drawer { width: min(92vw, 430px); max-height: 50vh; top: auto; right: 12px; bottom: 12px; left: 12px; transform: translateY(120%); padding: 16px; }
+      section.results-drawer.open { transform: translateY(0); }
+      .drawer-head h2 { font-size: 16px; }
+      .metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .hint-banner { display: none; }
     }
 
     @media (max-width: 460px) {
@@ -432,27 +387,24 @@
   </section>
 
   <script type="module">
-    const plants = [
-      { name: "Rice", type: "crop", minT: 18, maxT: 35, minR: 100, maxR: 500, seasons: ["Monsoon", "Summer"], tags: "warm · water-loving", note: "Warm conditions with substantial water availability." },
-      { name: "Wheat", type: "crop", minT: 10, maxT: 25, minR: 30, maxR: 120, seasons: ["Winter", "Spring"], tags: "cool-season · grain", note: "Cooler growing conditions and moderate-to-low rainfall." },
-      { name: "Maize", type: "crop", minT: 18, maxT: 32, minR: 50, maxR: 250, seasons: ["Spring", "Summer", "Monsoon"], tags: "warm · grain", note: "Flexible warm-season crop when moisture is adequate." },
-      { name: "Tomato", type: "crop", minT: 18, maxT: 30, minR: 40, maxR: 180, seasons: ["Spring", "Summer", "Autumn"], tags: "vegetable · sun-loving", note: "Warm conditions with no prolonged waterlogging." },
-      { name: "Potato", type: "crop", minT: 10, maxT: 24, minR: 40, maxR: 180, seasons: ["Autumn", "Winter", "Spring"], tags: "cool-season · tuber", note: "Cool weather and reasonably drained soil." },
-      { name: "Banana", type: "crop", minT: 20, maxT: 35, minR: 100, maxR: 400, seasons: ["Summer", "Monsoon"], tags: "tropical · fruit", note: "Tropical crop needing warmth and reliable moisture." },
-      { name: "Spinach", type: "crop", minT: 5, maxT: 25, minR: 30, maxR: 180, seasons: ["Winter", "Spring", "Autumn"], tags: "leafy-green · cool", note: "Cooler weather generally favors leaf production." },
-      { name: "Cotton", type: "crop", minT: 21, maxT: 35, minR: 40, maxR: 140, seasons: ["Summer", "Monsoon"], tags: "fiber · warm", note: "Heat-loving crop that benefits from long warm periods." },
-      { name: "Rose", type: "flower", minT: 12, maxT: 28, minR: 40, maxR: 150, seasons: ["Spring", "Autumn", "Summer"], tags: "flowering · perennial", note: "Requires temperate climate with well-drained soil." },
-      { name: "Jasmine", type: "flower", minT: 20, maxT: 35, minR: 60, maxR: 220, seasons: ["Summer", "Monsoon"], tags: "fragrant · warm", note: "Thrives in warm, humid tropical and sub-tropical conditions." },
-      { name: "Marigold", type: "flower", minT: 15, maxT: 32, minR: 30, maxR: 120, seasons: ["Spring", "Summer", "Autumn"], tags: "flowering · easy-grow", note: "Adaptable flower flourishing in bright, warm weather." },
-      { name: "Sunflower", type: "flower", minT: 18, maxT: 33, minR: 35, maxR: 140, seasons: ["Summer"], tags: "sun-loving · annual", note: "Needs high sun exposure and warm temps to blossom." },
-      { name: "Lavender", type: "flower", minT: 10, maxT: 26, minR: 10, maxR: 60, seasons: ["Spring", "Summer"], tags: "aromatic · dry-tolerant", note: "Prefers cooler/mild climates with low rain and good drainage." },
-      { name: "Bougainvillea", type: "flower", minT: 22, maxT: 38, minR: 20, maxR: 100, seasons: ["Summer", "Spring"], tags: "ornamental · drought-tolerant", note: "Loves heat and dry weather; blooms best in bright sun." },
-      { name: "Hibiscus", type: "flower", minT: 16, maxT: 34, minR: 60, maxR: 200, seasons: ["Summer", "Monsoon", "Spring"], tags: "tropical flower · showy", note: "Prefers moist, warm climates with plenty of sunlight." }
-    ];
-
+    let plants = [];
     let currentPin = { lat: 22.5726, lng: 88.3639, label: "Kolkata, India" };
     let activeMode = "climate";
 
+    // Fetch plants from plants.json
+    async function loadPlants() {
+      try {
+        const response = await fetch('./plants.json');
+        plants = await response.json();
+        console.log(`Loaded ${plants.length} plants from database`);
+        openResults();
+      } catch (error) {
+        console.error('Error loading plants:', error);
+        document.getElementById("results").innerHTML = '<div class="loading">Failed to load plant database</div>';
+      }
+    }
+
+    // Initialize globe
     const globeElem = document.getElementById('globe-container');
     const world = Globe()(globeElem)
       .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg')
@@ -534,6 +486,11 @@
     }
 
     function openResults() {
+      if (plants.length === 0) {
+        document.getElementById("results").innerHTML = '<div class="loading">Loading plants...</div>';
+        return;
+      }
+
       const tempVal = +document.getElementById("temp").value;
       const rainVal = +document.getElementById("rain").value;
       const seasonVal = document.getElementById("season").value;
@@ -545,7 +502,7 @@
       const ranked = plants
         .map(p => ({ ...p, score: calculateScore(p, tempVal, rainVal, seasonVal) }))
         .sort((a, b) => b.score - a.score)
-        .slice(0, 8);
+        .slice(0, 12);
 
       const resultsElem = document.getElementById("results");
       resultsElem.innerHTML = ranked.map(p => `
@@ -565,6 +522,7 @@
       document.getElementById("drawer").classList.add("open");
     }
 
+    // Event listeners
     document.getElementById("modeClimateBtn").addEventListener("click", () => {
       activeMode = "climate";
       document.getElementById("modeClimateBtn").classList.add("active");
@@ -637,7 +595,8 @@
       world.width(window.innerWidth).height(window.innerHeight);
     });
 
-    openResults();
+    // Load plants and initialize
+    loadPlants();
   </script>
 </body>
 </html>
