@@ -26,7 +26,7 @@
       --panel-width: 320px;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
 
     body {
       background-color: var(--bg-dark);
@@ -252,9 +252,73 @@
     }
 
     @media (max-width: 768px) {
-      aside.control-panel { width: calc(100vw - 30px); max-height: 40vh; top: 15px; left: 15px; }
-      section.results-drawer { width: calc(100vw - 30px); top: auto; bottom: 15px; right: 15px; max-height: 50vh; }
-      .hint-banner { display: none; }
+      body {
+        min-height: 100dvh;
+      }
+
+      aside.control-panel {
+        width: min(92vw, 430px);
+        max-height: 46vh;
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        padding: 14px;
+        gap: 12px;
+      }
+
+      .search-box {
+        display: grid;
+        grid-template-columns: 1fr 48px;
+      }
+
+      .btn {
+        min-height: 42px;
+      }
+
+      .mode-toggle {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .mode-btn {
+        width: 100%;
+      }
+
+      section.results-drawer {
+        width: min(92vw, 430px);
+        max-height: 50vh;
+        top: auto;
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        transform: translateY(120%);
+        padding: 16px;
+      }
+
+      section.results-drawer.open {
+        transform: translateY(0);
+      }
+
+      .drawer-head h2 {
+        font-size: 16px;
+      }
+
+      .metrics-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .hint-banner {
+        display: none;
+      }
+    }
+
+    @media (max-width: 460px) {
+      .brand { font-size: 18px; }
+      .sub { font-size: 10px; }
+      .metrics-grid { grid-template-columns: 1fr; }
+      .crop-top { font-size: 13px; }
+      .match-tag { font-size: 11px; }
+      section.results-drawer { max-height: 54vh; }
     }
   </style>
 </head>
@@ -368,11 +432,7 @@
   </section>
 
   <script type="module">
-    /* =========================
-       PLANTS & FLOWERS DATABASE
-    ========================= */
     const plants = [
-      // Crops & Food Plants
       { name: "Rice", type: "crop", minT: 18, maxT: 35, minR: 100, maxR: 500, seasons: ["Monsoon", "Summer"], tags: "warm · water-loving", note: "Warm conditions with substantial water availability." },
       { name: "Wheat", type: "crop", minT: 10, maxT: 25, minR: 30, maxR: 120, seasons: ["Winter", "Spring"], tags: "cool-season · grain", note: "Cooler growing conditions and moderate-to-low rainfall." },
       { name: "Maize", type: "crop", minT: 18, maxT: 32, minR: 50, maxR: 250, seasons: ["Spring", "Summer", "Monsoon"], tags: "warm · grain", note: "Flexible warm-season crop when moisture is adequate." },
@@ -380,22 +440,18 @@
       { name: "Potato", type: "crop", minT: 10, maxT: 24, minR: 40, maxR: 180, seasons: ["Autumn", "Winter", "Spring"], tags: "cool-season · tuber", note: "Cool weather and reasonably drained soil." },
       { name: "Banana", type: "crop", minT: 20, maxT: 35, minR: 100, maxR: 400, seasons: ["Summer", "Monsoon"], tags: "tropical · fruit", note: "Tropical crop needing warmth and reliable moisture." },
       { name: "Spinach", type: "crop", minT: 5, maxT: 25, minR: 30, maxR: 180, seasons: ["Winter", "Spring", "Autumn"], tags: "leafy-green · cool", note: "Cooler weather generally favors leaf production." },
-      
-      // Flowering Plants
-      { name: "Rose", type: "flower", minT: 12, maxT: 28, minR: 40, maxR: 150, seasons: ["Spring", "Autumn", "Summer"], tags: "flowering · perennial", note: "Requires temperate climate with well-drained soil and sunlight." },
+      { name: "Cotton", type: "crop", minT: 21, maxT: 35, minR: 40, maxR: 140, seasons: ["Summer", "Monsoon"], tags: "fiber · warm", note: "Heat-loving crop that benefits from long warm periods." },
+      { name: "Rose", type: "flower", minT: 12, maxT: 28, minR: 40, maxR: 150, seasons: ["Spring", "Autumn", "Summer"], tags: "flowering · perennial", note: "Requires temperate climate with well-drained soil." },
       { name: "Jasmine", type: "flower", minT: 20, maxT: 35, minR: 60, maxR: 220, seasons: ["Summer", "Monsoon"], tags: "fragrant · warm", note: "Thrives in warm, humid tropical and sub-tropical conditions." },
-      { name: "Marigold", type: "flower", minT: 15, maxT: 32, minR: 30, maxR: 120, seasons: ["Spring", "Summer", "Autumn"], tags: "flowering · easy-grow", note: "Adaptable flower flourishing in bright sunlight and moderate rainfall." },
+      { name: "Marigold", type: "flower", minT: 15, maxT: 32, minR: 30, maxR: 120, seasons: ["Spring", "Summer", "Autumn"], tags: "flowering · easy-grow", note: "Adaptable flower flourishing in bright, warm weather." },
       { name: "Sunflower", type: "flower", minT: 18, maxT: 33, minR: 35, maxR: 140, seasons: ["Summer"], tags: "sun-loving · annual", note: "Needs high sun exposure and warm temps to blossom." },
-      { name: "Lavender", type: "flower", minT: 10, maxT: 26, minR: 10, maxR: 60, seasons: ["Spring", "Summer"], tags: "aromatic · dry-tolerant", note: "Prefers cooler/mild climates with low rain and sandy soil." },
-      { name: "Bougainvillea", type: "flower", minT: 22, maxT: 38, minR: 20, maxR: 100, seasons: ["Summer", "Spring"], tags: "ornamental · drought-tolerant", note: "Loves heat and dry weather; blooms intensely under high sun." },
-      { name: "Hibiscus", type: "flower", minT: 16, maxT: 34, minR: 60, maxR: 200, seasons: ["Summer", "Monsoon", "Spring"], tags: "tropical flower · showy", note: "Prefers moist, warm climates with direct daily sunlight." }
+      { name: "Lavender", type: "flower", minT: 10, maxT: 26, minR: 10, maxR: 60, seasons: ["Spring", "Summer"], tags: "aromatic · dry-tolerant", note: "Prefers cooler/mild climates with low rain and good drainage." },
+      { name: "Bougainvillea", type: "flower", minT: 22, maxT: 38, minR: 20, maxR: 100, seasons: ["Summer", "Spring"], tags: "ornamental · drought-tolerant", note: "Loves heat and dry weather; blooms best in bright sun." },
+      { name: "Hibiscus", type: "flower", minT: 16, maxT: 34, minR: 60, maxR: 200, seasons: ["Summer", "Monsoon", "Spring"], tags: "tropical flower · showy", note: "Prefers moist, warm climates with plenty of sunlight." }
     ];
 
-    /* =========================
-       STATE & GLOBE INITIALIZATION
-    ========================= */
     let currentPin = { lat: 22.5726, lng: 88.3639, label: "Kolkata, India" };
-    let activeMode = "climate"; // 'climate' or 'season'
+    let activeMode = "climate";
 
     const globeElem = document.getElementById('globe-container');
     const world = Globe()(globeElem)
@@ -408,7 +464,7 @@
         el.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%); cursor: pointer;">
             <div style="width: 14px; height: 14px; background: #00f5d4; border-radius: 50%; box-shadow: 0 0 15px #00f5d4; border: 2px solid #fff;"></div>
-            <div style="position: absolute; top: 18px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: rgba(11, 15, 25, 0.85); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); font-size: 11px; font-weight: 700; color: #fff;">
+            <div style="position: absolute; top: 18px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: rgba(11, 15, 25, 0.85); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); color: #f0f6fc; font-size: 11px; font-weight: 600;">
               ${d.label}
             </div>
           </div>
@@ -423,21 +479,16 @@
     world.controls().autoRotateSpeed = 0.5;
     world.pointOfView({ lat: currentPin.lat, lng: currentPin.lng, altitude: 2.0 }, 1000);
 
-    /* =========================
-       WEATHER & GEOCODING APIS
-    ========================= */
     async function fetchLocationAndWeather(lat, lng) {
       document.getElementById("msg").textContent = "Fetching weather data...";
       
       try {
-        // Reverse Geocoding
         const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
         const geoData = await geoRes.json();
         const city = geoData.address.city || geoData.address.town || geoData.address.state || "Selected Spot";
         const country = geoData.address.country || "";
         const label = country ? `${city}, ${country}` : city;
 
-        // Fetch Real Weather Data via Open-Meteo
         const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&daily=precipitation_sum&timezone=auto`);
         const wData = await wRes.json();
 
@@ -446,7 +497,6 @@
           document.getElementById("temp").value = temp;
           document.getElementById("tempVal").textContent = `${temp}°C`;
 
-          // Infer estimated monthly precipitation
           if (wData.daily && wData.daily.precipitation_sum) {
             const dailyRain = wData.daily.precipitation_sum[0] || 2;
             const estMonthlyRain = Math.min(800, Math.round(dailyRain * 30));
@@ -473,15 +523,10 @@
       document.getElementById("coords").textContent = `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
     }
 
-    /* =========================
-       SCORING & MODES
-    ========================= */
     function calculateScore(plant, tempVal, rainVal, seasonVal) {
       if (activeMode === "season") {
-        // Pure Season Mode
         return plant.seasons.includes(seasonVal) ? 95 : 35;
       } else {
-        // Temperature & Rain Mode
         const tempScore = tempVal >= plant.minT && tempVal <= plant.maxT ? 1 : Math.max(0, 1 - Math.min(Math.abs(tempVal - plant.minT), Math.abs(tempVal - plant.maxT)) / 15);
         const rainScore = rainVal >= plant.minR && rainVal <= plant.maxR ? 1 : Math.max(0, 1 - Math.min(Math.abs(rainVal - plant.minR), Math.abs(rainVal - plant.maxR)) / 250);
         return Math.round((tempScore * 0.55 + rainScore * 0.45) * 100);
@@ -520,9 +565,6 @@
       document.getElementById("drawer").classList.add("open");
     }
 
-    /* =========================
-       EVENT LISTENERS & UI
-    ========================= */
     document.getElementById("modeClimateBtn").addEventListener("click", () => {
       activeMode = "climate";
       document.getElementById("modeClimateBtn").classList.add("active");
@@ -542,11 +584,15 @@
     });
 
     document.getElementById("season").addEventListener("change", openResults);
+
     document.getElementById("temp").addEventListener("input", (e) => {
       document.getElementById("tempVal").textContent = `${e.target.value}°C`;
+      if (activeMode === "climate") openResults();
     });
+
     document.getElementById("rain").addEventListener("input", (e) => {
       document.getElementById("rainVal").textContent = `${e.target.value} mm`;
+      if (activeMode === "climate") openResults();
     });
 
     document.getElementById("find").addEventListener("click", openResults);
