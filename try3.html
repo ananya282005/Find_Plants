@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TerraGrow 3D — Climate × Crop & Flower Explorer</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.27.2/dist/globe.gl.min.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --glass-bg: rgba(18, 26, 43, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --accent-teal: #00f5d4;
+      --accent-green: #2ec4b6;
+      --accent-pink: #f72585;
+      --accent-glow: rgba(0, 245, 212, 0.25);
+      --text-main: #f0f6fc;
+      --text-muted: #8b949e;
+      --panel-width: 320px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    #globe-container { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    aside.control-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 40px);
+      z-index: 10;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    aside::-webkit-scrollbar { width: 4px; }
+    aside::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+
+    .brand { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .brand span { color: var(--accent-teal); }
+    .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+    label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--accent-green);
+    }
+
+    .search-box { display: flex; gap: 8px; }
+
+    input[type="text"], select {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus, select:focus {
+      border-color: var(--accent-teal);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    select option { background: #121a2b; color: var(--text-main); }
+
+    .btn {
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-teal));
+      color: #051014;
+      border: none;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: filter 0.2s;
+    }
+
+    .btn:hover { filter: brightness(1.1); }
+    .btn-secondary { background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px solid var(--glass-border); }
+
+    .slider-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .slider-header { display: flex; justify-content: space-between; font-size: 12px; }
+    .slider-val { color: var(--accent-teal); font-weight: 700; }
+    input[type="range"] { width: 100%; margin: 8px 0 4px; accent-color: var(--accent-teal); cursor: pointer; }
+    .slider-scale { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); }
+
+    .mode-toggle {
+      display: flex;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 4px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .mode-btn.active {
+      background: var(--accent-teal);
+      color: #0b0f19;
+    }
+
+    .disabled-group { opacity: 0.35; pointer-events: none; }
+
+    .msg { font-size: 11px; color: var(--accent-teal); min-height: 14px; }
+
+    section.results-drawer {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: min(380px, calc(100vw - 40px));
+      max-height: calc(100vh - 40px);
+      z-index: 10;
+      padding: 20px;
+      overflow-y: auto;
+      transform: translateX(120%);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    section.results-drawer.open { transform: translateX(0); }
+
+    .drawer-head { display: flex; justify-content: space-between; align-items: flex-start; }
+    .drawer-head h2 { font-size: 18px; font-weight: 800; }
+    .coords { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .close-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: var(--text-main);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 16px;
+      display: grid;
+      place-items: center;
+    }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .metric-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      padding: 8px;
+      text-align: center;
+    }
+    .metric-card span { display: block; font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
+    .metric-card b { font-size: 13px; color: var(--accent-teal); }
+
+    .crop-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .crop-top { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; }
+    .match-tag { color: var(--accent-teal); font-size: 12px; }
+    .crop-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+    
+    .tag-container { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag-pill {
+      font-size: 9px;
+      font-weight: 700;
+      background: var(--accent-glow);
+      color: var(--accent-teal);
+      padding: 3px 8px;
+      border-radius: 20px;
+      border: 1px solid rgba(0, 245, 212, 0.3);
+    }
+
+    .tag-pill.flower {
+      background: rgba(247, 37, 133, 0.15);
+      color: var(--accent-pink);
+      border: 1px solid rgba(247, 37, 133, 0.3);
+    }
+
+    .hint-banner {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      padding: 10px 18px;
+      font-size: 12px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    @media (max-width: 768px) {
+      aside.control-panel { width: calc(100vw - 30px); max-height: 40vh; top: 15px; left: 15px; }
+      section.results-drawer { width: calc(100vw - 30px); top: auto; bottom: 15px; right: 15px; max-height: 50vh; }
+      .hint-banner { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="globe-container"></div>
+
+  <aside class="control-panel glass-card">
+    <div class="header-group">
+      <div class="brand">Terra<span>Grow 3D</span></div>
+      <div class="sub">Global Climate, Crops & Flowers Explorer</div>
+    </div>
+
+    <div class="form-group">
+      <label>Search Global Location</label>
+      <div class="search-box">
+        <input id="search" type="text" placeholder="e.g. London, Tokyo, Cairo...">
+        <button id="searchBtn" class="btn">⌕</button>
+      </div>
+      <div id="msg" class="msg"></div>
+    </div>
+
+    <div class="form-group">
+      <label>Filter Mode</label>
+      <div class="mode-toggle">
+        <button id="modeClimateBtn" class="mode-btn active">Temp & Rain</button>
+        <button id="modeSeasonBtn" class="mode-btn">By Season</button>
+      </div>
+    </div>
+
+    <div id="climateControls">
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label>Temperature</label>
+        <div class="slider-box">
+          <div class="slider-header">
+            <span>Avg Temp</span>
+            <span class="slider-val" id="tempVal">25°C</span>
+          </div>
+          <input id="temp" type="range" min="-10" max="45" value="25">
+          <div class="slider-scale">
+            <span>-10°C</span>
+            <span>45°C</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Rainfall</label>
+        <div class="slider-box">
+          <div class="slider-header">
+            <span>Monthly Rainfall</span>
+            <span class="slider-val" id="rainVal">150 mm</span>
+          </div>
+          <input id="rain" type="range" min="0" max="800" value="150" step="10">
+          <div class="slider-scale">
+            <span>0 mm</span>
+            <span>800+ mm</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="seasonControls" class="disabled-group">
+      <div class="form-group">
+        <label>Season</label>
+        <select id="season">
+          <option>Spring</option>
+          <option>Summer</option>
+          <option>Monsoon</option>
+          <option>Autumn</option>
+          <option>Winter</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="find" class="btn">Find Suitable Vegetation</button>
+    <button id="reset" class="btn btn-secondary">Reset Filters</button>
+  </aside>
+
+  <div class="hint-banner glass-card">
+    💡 <b>Click anywhere on the Globe</b> to fetch local weather & suitable plants.
+  </div>
+
+  <section id="drawer" class="results-drawer glass-card">
+    <div class="drawer-head">
+      <div>
+        <h2 id="drawerPlace">Kolkata, India</h2>
+        <div id="coords" class="coords">22.5726°, 88.3639°</div>
+      </div>
+      <button id="close" class="close-btn">×</button>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <span>Temp</span>
+        <b id="dTemp">25°C</b>
+      </div>
+      <div class="metric-card">
+        <span>Season</span>
+        <b id="dSeason">Summer</b>
+      </div>
+      <div class="metric-card">
+        <span>Rainfall</span>
+        <b id="dRain">150 mm</b>
+      </div>
+    </div>
+
+    <label>Recommended Plants & Flowers</label>
+    <div id="results" style="display: flex; flex-direction: column; gap: 8px;"></div>
+  </section>
+
+  <script type="module">
+    /* =========================
+       PLANTS & FLOWERS DATABASE
+    ========================= */
+    const plants = [
+      // Crops & Food Plants
+      { name: "Rice", type: "crop", minT: 18, maxT: 35, minR: 100, maxR: 500, seasons: ["Monsoon", "Summer"], tags: "warm · water-loving", note: "Warm conditions with substantial water availability." },
+      { name: "Wheat", type: "crop", minT: 10, maxT: 25, minR: 30, maxR: 120, seasons: ["Winter", "Spring"], tags: "cool-season · grain", note: "Cooler growing conditions and moderate-to-low rainfall." },
+      { name: "Maize", type: "crop", minT: 18, maxT: 32, minR: 50, maxR: 250, seasons: ["Spring", "Summer", "Monsoon"], tags: "warm · grain", note: "Flexible warm-season crop when moisture is adequate." },
+      { name: "Tomato", type: "crop", minT: 18, maxT: 30, minR: 40, maxR: 180, seasons: ["Spring", "Summer", "Autumn"], tags: "vegetable · sun-loving", note: "Warm conditions with no prolonged waterlogging." },
+      { name: "Potato", type: "crop", minT: 10, maxT: 24, minR: 40, maxR: 180, seasons: ["Autumn", "Winter", "Spring"], tags: "cool-season · tuber", note: "Cool weather and reasonably drained soil." },
+      { name: "Banana", type: "crop", minT: 20, maxT: 35, minR: 100, maxR: 400, seasons: ["Summer", "Monsoon"], tags: "tropical · fruit", note: "Tropical crop needing warmth and reliable moisture." },
+      { name: "Spinach", type: "crop", minT: 5, maxT: 25, minR: 30, maxR: 180, seasons: ["Winter", "Spring", "Autumn"], tags: "leafy-green · cool", note: "Cooler weather generally favors leaf production." },
+      
+      // Flowering Plants
+      { name: "Rose", type: "flower", minT: 12, maxT: 28, minR: 40, maxR: 150, seasons: ["Spring", "Autumn", "Summer"], tags: "flowering · perennial", note: "Requires temperate climate with well-drained soil and sunlight." },
+      { name: "Jasmine", type: "flower", minT: 20, maxT: 35, minR: 60, maxR: 220, seasons: ["Summer", "Monsoon"], tags: "fragrant · warm", note: "Thrives in warm, humid tropical and sub-tropical conditions." },
+      { name: "Marigold", type: "flower", minT: 15, maxT: 32, minR: 30, maxR: 120, seasons: ["Spring", "Summer", "Autumn"], tags: "flowering · easy-grow", note: "Adaptable flower flourishing in bright sunlight and moderate rainfall." },
+      { name: "Sunflower", type: "flower", minT: 18, maxT: 33, minR: 35, maxR: 140, seasons: ["Summer"], tags: "sun-loving · annual", note: "Needs high sun exposure and warm temps to blossom." },
+      { name: "Lavender", type: "flower", minT: 10, maxT: 26, minR: 10, maxR: 60, seasons: ["Spring", "Summer"], tags: "aromatic · dry-tolerant", note: "Prefers cooler/mild climates with low rain and sandy soil." },
+      { name: "Bougainvillea", type: "flower", minT: 22, maxT: 38, minR: 20, maxR: 100, seasons: ["Summer", "Spring"], tags: "ornamental · drought-tolerant", note: "Loves heat and dry weather; blooms intensely under high sun." },
+      { name: "Hibiscus", type: "flower", minT: 16, maxT: 34, minR: 60, maxR: 200, seasons: ["Summer", "Monsoon", "Spring"], tags: "tropical flower · showy", note: "Prefers moist, warm climates with direct daily sunlight." }
+    ];
+
+    /* =========================
+       STATE & GLOBE INITIALIZATION
+    ========================= */
+    let currentPin = { lat: 22.5726, lng: 88.3639, label: "Kolkata, India" };
+    let activeMode = "climate"; // 'climate' or 'season'
+
+    const globeElem = document.getElementById('globe-container');
+    const world = Globe()(globeElem)
+      .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg')
+      .bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png')
+      .backgroundImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png')
+      .htmlElementsData([currentPin])
+      .htmlElement(d => {
+        const el = document.createElement('div');
+        el.innerHTML = `
+          <div style="position: relative; transform: translate(-50%, -100%); cursor: pointer;">
+            <div style="width: 14px; height: 14px; background: #00f5d4; border-radius: 50%; box-shadow: 0 0 15px #00f5d4; border: 2px solid #fff;"></div>
+            <div style="position: absolute; top: 18px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: rgba(11, 15, 25, 0.85); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); font-size: 11px; font-weight: 700; color: #fff;">
+              ${d.label}
+            </div>
+          </div>
+        `;
+        return el;
+      })
+      .onGlobeClick(({ lat, lng }) => {
+        fetchLocationAndWeather(lat, lng);
+      });
+
+    world.controls().autoRotate = true;
+    world.controls().autoRotateSpeed = 0.5;
+    world.pointOfView({ lat: currentPin.lat, lng: currentPin.lng, altitude: 2.0 }, 1000);
+
+    /* =========================
+       WEATHER & GEOCODING APIS
+    ========================= */
+    async function fetchLocationAndWeather(lat, lng) {
+      document.getElementById("msg").textContent = "Fetching weather data...";
+      
+      try {
+        // Reverse Geocoding
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+        const geoData = await geoRes.json();
+        const city = geoData.address.city || geoData.address.town || geoData.address.state || "Selected Spot";
+        const country = geoData.address.country || "";
+        const label = country ? `${city}, ${country}` : city;
+
+        // Fetch Real Weather Data via Open-Meteo
+        const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&daily=precipitation_sum&timezone=auto`);
+        const wData = await wRes.json();
+
+        if (wData.current_weather) {
+          const temp = Math.round(wData.current_weather.temperature);
+          document.getElementById("temp").value = temp;
+          document.getElementById("tempVal").textContent = `${temp}°C`;
+
+          // Infer estimated monthly precipitation
+          if (wData.daily && wData.daily.precipitation_sum) {
+            const dailyRain = wData.daily.precipitation_sum[0] || 2;
+            const estMonthlyRain = Math.min(800, Math.round(dailyRain * 30));
+            document.getElementById("rain").value = estMonthlyRain;
+            document.getElementById("rainVal").textContent = `${estMonthlyRain} mm`;
+          }
+        }
+
+        document.getElementById("msg").textContent = "";
+        updatePin(lat, lng, label);
+        openResults();
+      } catch (e) {
+        document.getElementById("msg").textContent = "Loaded pin location.";
+        updatePin(lat, lng, "Custom Coordinate");
+        openResults();
+      }
+    }
+
+    function updatePin(lat, lng, label) {
+      currentPin = { lat, lng, label };
+      world.htmlElementsData([currentPin]);
+      world.pointOfView({ lat, lng, altitude: 1.5 }, 1200);
+      document.getElementById("drawerPlace").textContent = label;
+      document.getElementById("coords").textContent = `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+    }
+
+    /* =========================
+       SCORING & MODES
+    ========================= */
+    function calculateScore(plant, tempVal, rainVal, seasonVal) {
+      if (activeMode === "season") {
+        // Pure Season Mode
+        return plant.seasons.includes(seasonVal) ? 95 : 35;
+      } else {
+        // Temperature & Rain Mode
+        const tempScore = tempVal >= plant.minT && tempVal <= plant.maxT ? 1 : Math.max(0, 1 - Math.min(Math.abs(tempVal - plant.minT), Math.abs(tempVal - plant.maxT)) / 15);
+        const rainScore = rainVal >= plant.minR && rainVal <= plant.maxR ? 1 : Math.max(0, 1 - Math.min(Math.abs(rainVal - plant.minR), Math.abs(rainVal - plant.maxR)) / 250);
+        return Math.round((tempScore * 0.55 + rainScore * 0.45) * 100);
+      }
+    }
+
+    function openResults() {
+      const tempVal = +document.getElementById("temp").value;
+      const rainVal = +document.getElementById("rain").value;
+      const seasonVal = document.getElementById("season").value;
+
+      document.getElementById("dTemp").textContent = `${tempVal}°C`;
+      document.getElementById("dRain").textContent = `${rainVal} mm`;
+      document.getElementById("dSeason").textContent = seasonVal;
+
+      const ranked = plants
+        .map(p => ({ ...p, score: calculateScore(p, tempVal, rainVal, seasonVal) }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 8);
+
+      const resultsElem = document.getElementById("results");
+      resultsElem.innerHTML = ranked.map(p => `
+        <article class="crop-card">
+          <div class="crop-top">
+            <span>${p.name}</span>
+            <span class="match-tag">${p.score}% match</span>
+          </div>
+          <div class="crop-desc">${p.note}</div>
+          <div class="tag-container">
+            <span class="tag-pill ${p.type}">${p.type.toUpperCase()}</span>
+            <span class="tag-pill">${p.tags}</span>
+          </div>
+        </article>
+      `).join('');
+
+      document.getElementById("drawer").classList.add("open");
+    }
+
+    /* =========================
+       EVENT LISTENERS & UI
+    ========================= */
+    document.getElementById("modeClimateBtn").addEventListener("click", () => {
+      activeMode = "climate";
+      document.getElementById("modeClimateBtn").classList.add("active");
+      document.getElementById("modeSeasonBtn").classList.remove("active");
+      document.getElementById("climateControls").classList.remove("disabled-group");
+      document.getElementById("seasonControls").classList.add("disabled-group");
+      openResults();
+    });
+
+    document.getElementById("modeSeasonBtn").addEventListener("click", () => {
+      activeMode = "season";
+      document.getElementById("modeSeasonBtn").classList.add("active");
+      document.getElementById("modeClimateBtn").classList.remove("active");
+      document.getElementById("seasonControls").classList.remove("disabled-group");
+      document.getElementById("climateControls").classList.add("disabled-group");
+      openResults();
+    });
+
+    document.getElementById("season").addEventListener("change", openResults);
+    document.getElementById("temp").addEventListener("input", (e) => {
+      document.getElementById("tempVal").textContent = `${e.target.value}°C`;
+    });
+    document.getElementById("rain").addEventListener("input", (e) => {
+      document.getElementById("rainVal").textContent = `${e.target.value} mm`;
+    });
+
+    document.getElementById("find").addEventListener("click", openResults);
+    document.getElementById("close").addEventListener("click", () => {
+      document.getElementById("drawer").classList.remove("open");
+    });
+
+    async function searchPlace() {
+      const query = document.getElementById("search").value.trim();
+      const msg = document.getElementById("msg");
+      if (!query) return;
+      msg.textContent = "Searching location...";
+
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (!data.length) { msg.textContent = "Location not found."; return; }
+
+        const lat = +data[0].lat;
+        const lng = +data[0].lon;
+        fetchLocationAndWeather(lat, lng);
+      } catch (err) {
+        msg.textContent = "Search error.";
+      }
+    }
+
+    document.getElementById("searchBtn").addEventListener("click", searchPlace);
+    document.getElementById("search").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") searchPlace();
+    });
+
+    document.getElementById("reset").addEventListener("click", () => {
+      document.getElementById("temp").value = 25;
+      document.getElementById("rain").value = 150;
+      document.getElementById("season").value = "Summer";
+      document.getElementById("tempVal").textContent = "25°C";
+      document.getElementById("rainVal").textContent = "150 mm";
+      openResults();
+    });
+
+    window.addEventListener('resize', () => {
+      world.width(window.innerWidth).height(window.innerHeight);
+    });
+
+    openResults();
+  </script>
+</body>
+</html>
