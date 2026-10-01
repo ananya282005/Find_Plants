@@ -390,21 +390,40 @@
     let plants = [];
     let currentPin = { lat: 22.5726, lng: 88.3639, label: "Kolkata, India" };
     let activeMode = "climate";
+    let locationRequestToken = 0;
 
-    // Fetch plants from plants.json
+    function showPlantLoadError(message) {
+      const resultsElem = document.getElementById("results");
+      if (resultsElem) {
+        resultsElem.innerHTML = `<div class="loading">${message}</div>`;
+      }
+    }
+
     async function loadPlants() {
       try {
-        const response = await fetch('./plants.json');
-        plants = await response.json();
+        if (window.location.protocol === 'file:') {
+          throw new Error('This app must be served over HTTP(S) to load plants.json correctly.');
+        }
+
+        const response = await fetch('./plants.json', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Plant database request failed (${response.status})`);
+        }
+
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+          throw new Error('Plant database is not valid JSON array data.');
+        }
+
+        plants = data;
         console.log(`Loaded ${plants.length} plants from database`);
         openResults();
       } catch (error) {
         console.error('Error loading plants:', error);
-        document.getElementById("results").innerHTML = '<div class="loading">Failed to load plant database</div>';
+        showPlantLoadError('Failed to load plant database. Please serve the app with a local web server.');
       }
     }
 
-    // Initialize globe
     const globeElem = document.getElementById('globe-container');
     const world = Globe()(globeElem)
       .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg')
@@ -416,7 +435,7 @@
         el.innerHTML = `
           <div style="position: relative; transform: translate(-50%, -100%); cursor: pointer;">
             <div style="width: 14px; height: 14px; background: #00f5d4; border-radius: 50%; box-shadow: 0 0 15px #00f5d4; border: 2px solid #fff;"></div>
-            <div style="position: absolute; top: 18px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: rgba(11, 15, 25, 0.85); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); color: #f0f6fc; font-size: 11px; font-weight: 600;">
+            <div style="position: absolute; top: 18px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: rgba(11, 15, 25, 0.85); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.18); color: #f0f6fc; font-size: 11px; font-weight: 600;">
               ${d.label}
             </div>
           </div>
@@ -432,17 +451,28 @@
     world.pointOfView({ lat: currentPin.lat, lng: currentPin.lng, altitude: 2.0 }, 1000);
 
     async function fetchLocationAndWeather(lat, lng) {
+      const requestToken = ++locationRequestToken;
       document.getElementById("msg").textContent = "Fetching weather data...";
       
       try {
         const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+        if (!geoRes.ok) {
+          throw new Error(`Location lookup failed (${geoRes.status})`);
+        }
+
         const geoData = await geoRes.json();
-        const city = geoData.address.city || geoData.address.town || geoData.address.state || "Selected Spot";
-        const country = geoData.address.country || "";
+        const city = geoData.address?.city || geoData.address?.town || geoData.address?.state || "Selected Spot";
+        const country = geoData.address?.country || "";
         const label = country ? `${city}, ${country}` : city;
 
         const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&daily=precipitation_sum&timezone=auto`);
+        if (!wRes.ok) {
+          throw new Error(`Weather request failed (${wRes.status})`);
+        }
+
         const wData = await wRes.json();
+
+        if (requestToken !== locationRequestToken) return;
 
         if (wData.current_weather) {
           const temp = Math.round(wData.current_weather.temperature);
@@ -460,8 +490,12 @@
         document.getElementById("msg").textContent = "";
         updatePin(lat, lng, label);
         openResults();
-      } catch (e) {
-        document.getElementById("msg").textContent = "Loaded pin location.";
+      } catch (error) {
+        console.error('Error fetching location/weather:', error);
+
+        if (requestToken !== locationRequestToken) return;
+
+        document.getElementById("msg").textContent = "Weather unavailable for this location. Using selected coordinates.";
         updatePin(lat, lng, "Custom Coordinate");
         openResults();
       }
@@ -522,7 +556,6 @@
       document.getElementById("drawer").classList.add("open");
     }
 
-    // Event listeners
     document.getElementById("modeClimateBtn").addEventListener("click", () => {
       activeMode = "climate";
       document.getElementById("modeClimateBtn").classList.add("active");
@@ -566,6 +599,10 @@
 
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`);
+        if (!res.ok) {
+          throw new Error(`Location search failed (${res.status})`);
+        }
+
         const data = await res.json();
         if (!data.length) { msg.textContent = "Location not found."; return; }
 
@@ -573,6 +610,7 @@
         const lng = +data[0].lon;
         fetchLocationAndWeather(lat, lng);
       } catch (err) {
+        console.error('Search error:', err);
         msg.textContent = "Search error.";
       }
     }
@@ -583,6 +621,12 @@
     });
 
     document.getElementById("reset").addEventListener("click", () => {
+      activeMode = "climate";
+      document.getElementById("modeClimateBtn").classList.add("active");
+      document.getElementById("modeSeasonBtn").classList.remove("active");
+      document.getElementById("climateControls").classList.remove("disabled-group");
+      document.getElementById("seasonControls").classList.add("disabled-group");
+
       document.getElementById("temp").value = 25;
       document.getElementById("rain").value = 150;
       document.getElementById("season").value = "Summer";
@@ -595,7 +639,6 @@
       world.width(window.innerWidth).height(window.innerHeight);
     });
 
-    // Load plants and initialize
     loadPlants();
   </script>
 </body>
